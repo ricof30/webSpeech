@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Speech Captions</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 900px;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 0.95em;
+        }
+
+        .controls {
+            padding: 30px;
+            text-align: center;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .btn {
+            padding: 15px 40px;
+            font-size: 1.1em;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            margin: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-start {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-start:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-stop {
+            background: #e74c3c;
+            color: white;
+            display: none;
+        }
+
+        .btn-stop:hover {
+            background: #c0392b;
+            transform: translateY(-2px);
+        }
+
+        .btn-clear {
+            background: #95a5a6;
+            color: white;
+        }
+
+        .btn-clear:hover {
+            background: #7f8c8d;
+            transform: translateY(-2px);
+        }
+
+        .status {
+            padding: 15px 30px;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #95a5a6;
+        }
+
+        .status-dot.listening {
+            background: #e74c3c;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .caption-display {
+            padding: 40px;
+            min-height: 300px;
+            max-height: 400px;
+            overflow-y: auto;
+            background: #f8f9fa;
+        }
+
+        .caption-box {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .caption-text {
+            font-size: 1.2em;
+            line-height: 1.6;
+            color: #2c3e50;
+        }
+
+        .caption-text.interim {
+            color: #7f8c8d;
+            font-style: italic;
+        }
+
+        .timestamp {
+            font-size: 0.8em;
+            color: #95a5a6;
+            margin-top: 10px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #95a5a6;
+        }
+
+        .empty-state svg {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .settings {
+            padding: 20px 30px;
+            background: #f8f9fa;
+            border-top: 2px solid #e9ecef;
+        }
+
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .setting-row:last-child {
+            margin-bottom: 0;
+        }
+
+        select {
+            padding: 8px 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 0.95em;
+            cursor: pointer;
+        }
+
+        .warning {
+            background: #fff3cd;
+            color: #856404;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 30px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎤 Live Speech Captions</h1>
+            <p>Real-time speech-to-text transcription</p>
+        </div>
+
+        <div class="warning" id="warning">
+            ⚠️ Web Speech API works best in Google Chrome. Make sure to allow microphone access.
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-start" id="startBtn">Start Listening</button>
+            <button class="btn btn-stop" id="stopBtn">Stop Listening</button>
+            <button class="btn btn-clear" id="clearBtn">Clear Captions</button>
+        </div>
+
+        <div class="status">
+            <div class="status-indicator">
+                <div class="status-dot" id="statusDot"></div>
+                <span id="statusText">Ready to start</span>
+            </div>
+            <span id="wordCount">0 words</span>
+        </div>
+
+        <div class="caption-display" id="captionDisplay">
+            <div class="empty-state">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                    <line x1="12" y1="19" x2="12" y2="23"></line>
+                    <line x1="8" y1="23" x2="16" y2="23"></line>
+                </svg>
+                <p>Click "Start Listening" to begin transcription</p>
+            </div>
+        </div>
+
+        <div class="settings">
+            <div class="setting-row">
+                <label>Language:</label>
+                <select id="languageSelect">
+                    <option value="en-US">English (US)</option>
+                    <option value="en-GB">English (UK)</option>
+                    <option value="es-ES">Spanish</option>
+                    <option value="fr-FR">French</option>
+                    <option value="de-DE">German</option>
+                    <option value="it-IT">Italian</option>
+                    <option value="pt-BR">Portuguese (Brazil)</option>
+                    <option value="ja-JP">Japanese</option>
+                    <option value="ko-KR">Korean</option>
+                    <option value="zh-CN">Chinese (Mandarin)</option>
+                </select>
+            </div>
+            <div class="setting-row">
+                <label>Continuous Mode:</label>
+                <select id="continuousSelect">
+                    <option value="true">On (keeps listening)</option>
+                    <option value="false">Off (stops after pause)</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Check browser support
+        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+            document.getElementById('warning').style.display = 'block';
+            document.getElementById('warning').textContent = '❌ Your browser does not support Speech Recognition. Please use Google Chrome.';
+            document.getElementById('startBtn').disabled = true;
+        } else {
+            document.getElementById('warning').style.display = 'block';
+        }
+
+        // Initialize Speech Recognition
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const recognition = new SpeechRecognition();
+
+        // Get elements
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const captionDisplay = document.getElementById('captionDisplay');
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const wordCount = document.getElementById('wordCount');
+        const languageSelect = document.getElementById('languageSelect');
+        const continuousSelect = document.getElementById('continuousSelect');
+
+        let isListening = false;
+        let finalTranscript = '';
+        let totalWords = 0;
+
+        // Configure recognition
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = 'en-US';
+
+        // Update settings
+        languageSelect.addEventListener('change', (e) => {
+            recognition.lang = e.target.value;
+        });
+
+        continuousSelect.addEventListener('change', (e) => {
+            recognition.continuous = e.target.value === 'true';
+        });
+
+        // Start listening
+        startBtn.addEventListener('click', () => {
+            recognition.start();
+            isListening = true;
+            startBtn.style.display = 'none';
+            stopBtn.style.display = 'inline-block';
+            statusDot.classList.add('listening');
+            statusText.textContent = 'Listening...';
+            
+            // Clear empty state
+            const emptyState = captionDisplay.querySelector('.empty-state');
+            if (emptyState) {
+                emptyState.remove();
+            }
+        });
+
+        // Stop listening
+        stopBtn.addEventListener('click', () => {
+            recognition.stop();
+            isListening = false;
+            startBtn.style.display = 'inline-block';
+            stopBtn.style.display = 'none';
+            statusDot.classList.remove('listening');
+            statusText.textContent = 'Stopped';
+        });
+
+        // Clear captions
+        clearBtn.addEventListener('click', () => {
+            captionDisplay.innerHTML = `
+                <div class="empty-state">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                        <line x1="12" y1="19" x2="12" y2="23"></line>
+                        <line x1="8" y1="23" x2="16" y2="23"></line>
+                    </svg>
+                    <p>Click "Start Listening" to begin transcription</p>
+                </div>
+            `;
+            finalTranscript = '';
+            totalWords = 0;
+            wordCount.textContent = '0 words';
+        });
+
+        // Handle results
+        recognition.onresult = (event) => {
+            let interimTranscript = '';
+
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                const transcript = event.results[i][0].transcript;
+                
+                if (event.results[i].isFinal) {
+                    finalTranscript += transcript + ' ';
+                    addCaption(transcript, true);
+                } else {
+                    interimTranscript += transcript;
+                    addCaption(interimTranscript, false);
+                }
+            }
+        };
+
+        // Add caption to display
+        function addCaption(text, isFinal) {
+            // Remove interim caption if exists
+            const interimCaption = captionDisplay.querySelector('.interim');
+            if (interimCaption && isFinal) {
+                interimCaption.remove();
+            }
+
+            if (!isFinal) {
+                // Update or create interim caption
+                if (interimCaption) {
+                    interimCaption.querySelector('.caption-text').textContent = text;
+                } else {
+                    const captionBox = document.createElement('div');
+                    captionBox.className = 'caption-box';
+                    captionBox.innerHTML = `
+                        <div class="caption-text interim">${text}</div>
+                    `;
+                    captionDisplay.appendChild(captionBox);
+                }
+            } else {
+                // Add final caption
+                const captionBox = document.createElement('div');
+                captionBox.className = 'caption-box';
+                const timestamp = new Date().toLocaleTimeString();
+                captionBox.innerHTML = `
+                    <div class="caption-text">${text}</div>
+                    <div class="timestamp">${timestamp}</div>
+                `;
+                captionDisplay.appendChild(captionBox);
+                
+                // Update word count
+                totalWords += text.trim().split(/\s+/).length;
+                wordCount.textContent = `${totalWords} words`;
+                
+                // Auto-scroll to bottom
+                captionDisplay.scrollTop = captionDisplay.scrollHeight;
+            }
+        }
+
+        // Handle errors
+        recognition.onerror = (event) => {
+            console.error('Speech recognition error:', event.error);
+            statusText.textContent = `Error: ${event.error}`;
+            statusDot.classList.remove('listening');
+            
+            if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+                alert('Microphone access denied. Please allow microphone access and try again.');
+            }
+        };
+
+        // Handle end
+        recognition.onend = () => {
+            if (isListening && recognition.continuous) {
+                // Restart if continuous mode and still listening
+                try {
+                    recognition.start();
+                } catch (e) {
+                    console.log('Recognition restart failed:', e);
+                }
+            } else {
+                statusDot.classList.remove('listening');
+                statusText.textContent = 'Stopped';
+                startBtn.style.display = 'inline-block';
+                stopBtn.style.display = 'none';
+                isListening = false;
+            }
+        };
+    </script>
+</body>
+</html>
