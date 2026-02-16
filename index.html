@@ -130,47 +130,37 @@
 
         .caption-display {
             padding: 40px;
-            min-height: 300px;
-            max-height: 400px;
-            overflow-y: auto;
-            background: #f8f9fa;
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #000;
+            position: relative;
         }
 
         .caption-box {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 15px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-            animation: slideIn 0.3s ease;
-        }
-
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            background: rgba(0, 0, 0, 0.85);
+            padding: 25px 40px;
+            border-radius: 8px;
+            max-width: 90%;
+            text-align: center;
         }
 
         .caption-text {
-            font-size: 1.2em;
-            line-height: 1.6;
-            color: #2c3e50;
+            font-size: 2em;
+            line-height: 1.4;
+            color: #ffffff;
+            font-weight: 500;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            min-height: 1.4em;
         }
 
         .caption-text.interim {
-            color: #7f8c8d;
-            font-style: italic;
+            color: #cccccc;
         }
 
         .timestamp {
-            font-size: 0.8em;
-            color: #95a5a6;
-            margin-top: 10px;
+            display: none;
         }
 
         .empty-state {
@@ -310,7 +300,6 @@
         const continuousSelect = document.getElementById('continuousSelect');
 
         let isListening = false;
-        let finalTranscript = '';
         let totalWords = 0;
 
         // Configure recognition
@@ -366,66 +355,50 @@
                     <p>Click "Start Listening" to begin transcription</p>
                 </div>
             `;
-            finalTranscript = '';
             totalWords = 0;
             wordCount.textContent = '0 words';
         });
 
         // Handle results
         recognition.onresult = (event) => {
-            let interimTranscript = '';
+            let currentText = '';
 
             for (let i = event.resultIndex; i < event.results.length; i++) {
                 const transcript = event.results[i][0].transcript;
-                
-                if (event.results[i].isFinal) {
-                    finalTranscript += transcript + ' ';
-                    addCaption(transcript, true);
-                } else {
-                    interimTranscript += transcript;
-                    addCaption(interimTranscript, false);
-                }
+                currentText += transcript + ' ';
             }
+
+            // Update the single caption display
+            updateCaption(currentText.trim());
         };
 
-        // Add caption to display
-        function addCaption(text, isFinal) {
-            // Remove interim caption if exists
-            const interimCaption = captionDisplay.querySelector('.interim');
-            if (interimCaption && isFinal) {
-                interimCaption.remove();
+        // Update caption to display (replaces old text)
+        function updateCaption(text) {
+            if (!text) return;
+
+            // Remove empty state if exists
+            const emptyState = captionDisplay.querySelector('.empty-state');
+            if (emptyState) {
+                emptyState.remove();
             }
 
-            if (!isFinal) {
-                // Update or create interim caption
-                if (interimCaption) {
-                    interimCaption.querySelector('.caption-text').textContent = text;
-                } else {
-                    const captionBox = document.createElement('div');
-                    captionBox.className = 'caption-box';
-                    captionBox.innerHTML = `
-                        <div class="caption-text interim">${text}</div>
-                    `;
-                    captionDisplay.appendChild(captionBox);
-                }
-            } else {
-                // Add final caption
-                const captionBox = document.createElement('div');
+            // Find or create the caption box
+            let captionBox = captionDisplay.querySelector('.caption-box');
+            
+            if (!captionBox) {
+                captionBox = document.createElement('div');
                 captionBox.className = 'caption-box';
-                const timestamp = new Date().toLocaleTimeString();
-                captionBox.innerHTML = `
-                    <div class="caption-text">${text}</div>
-                    <div class="timestamp">${timestamp}</div>
-                `;
+                captionBox.innerHTML = '<div class="caption-text"></div>';
                 captionDisplay.appendChild(captionBox);
-                
-                // Update word count
-                totalWords += text.trim().split(/\s+/).length;
-                wordCount.textContent = `${totalWords} words`;
-                
-                // Auto-scroll to bottom
-                captionDisplay.scrollTop = captionDisplay.scrollHeight;
             }
+
+            // Update the text
+            const captionText = captionBox.querySelector('.caption-text');
+            captionText.textContent = text;
+
+            // Update word count
+            totalWords = text.trim().split(/\s+/).filter(w => w.length > 0).length;
+            wordCount.textContent = `${totalWords} words`;
         }
 
         // Handle errors
