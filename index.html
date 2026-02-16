@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OBS Live Captions</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Live Speech Captions</title>
     <style>
         * {
             margin: 0;
@@ -13,71 +13,119 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: transparent;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             display: flex;
-            align-items: flex-end;
             justify-content: center;
-            padding: 20px;
+            align-items: center;
+            padding: 10px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 900px;
+            width: 100%;
             overflow: hidden;
         }
 
-        .caption-container {
-            width: 100%;
-            max-width: 1200px;
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: clamp(1.5em, 5vw, 2em);
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: clamp(0.85em, 3vw, 0.95em);
+        }
+
+        .controls {
+            padding: 20px 15px;
+            text-align: center;
+            border-bottom: 2px solid #f0f0f0;
             display: flex;
-            flex-direction: column;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            font-size: clamp(0.9em, 3vw, 1.1em);
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            flex: 1 1 auto;
+            min-width: 140px;
+            max-width: 200px;
+        }
+
+        .btn-start {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-start:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-stop {
+            background: #e74c3c;
+            color: white;
+            display: none;
+        }
+
+        .btn-stop:hover {
+            background: #c0392b;
+            transform: translateY(-2px);
+        }
+
+        .btn-clear {
+            background: #95a5a6;
+            color: white;
+        }
+
+        .btn-clear:hover {
+            background: #7f8c8d;
+            transform: translateY(-2px);
+        }
+
+        .status {
+            padding: 12px 20px;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            font-size: clamp(0.85em, 2.5vw, 1em);
+        }
+
+        .status-indicator {
+            display: flex;
             align-items: center;
             gap: 10px;
         }
 
-        .caption-box {
-            background: rgba(0, 0, 0, 0.85);
-            padding: 20px 40px;
-            border-radius: 8px;
-            max-width: 90%;
-            text-align: center;
-            opacity: 0;
-            transform: translateY(20px);
-            transition: all 0.3s ease;
-        }
-
-        .caption-box.show {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        .caption-text {
-            font-size: 2.5em;
-            line-height: 1.4;
-            color: #ffffff;
-            font-weight: 600;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.9);
-            letter-spacing: 0.5px;
-        }
-
-        /* Status indicator (small, top-right corner) */
-        .status-indicator {
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 8px 15px;
-            border-radius: 20px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 0.9em;
-            color: white;
-            z-index: 1000;
-            opacity: 0.6;
-        }
-
         .status-dot {
-            width: 10px;
-            height: 10px;
+            width: 12px;
+            height: 12px;
             border-radius: 50%;
             background: #95a5a6;
+            flex-shrink: 0;
         }
 
         .status-dot.listening {
@@ -85,145 +133,205 @@
             animation: pulse 1.5s ease-in-out infinite;
         }
 
-        .status-dot.ready {
-            background: #2ecc71;
-        }
-
         @keyframes pulse {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.5; }
         }
 
-        /* Error message */
-        .error-message {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(231, 76, 60, 0.9);
-            color: white;
-            padding: 20px 30px;
-            border-radius: 10px;
-            text-align: center;
-            display: none;
-            z-index: 2000;
-        }
-
-        /* Settings overlay (hidden by default, show with ?settings in URL) */
-        .settings-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.95);
-            display: none;
-            flex-direction: column;
+        .caption-display {
+            padding: 30px 20px;
+            min-height: 200px;
+            display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 3000;
-            color: white;
-            padding: 40px;
+            background: #000;
+            position: relative;
         }
 
-        .settings-overlay.show {
-            display: flex;
-        }
-
-        .settings-content {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 40px;
-            border-radius: 15px;
-            max-width: 500px;
-            width: 100%;
-        }
-
-        .settings-content h2 {
-            margin-bottom: 20px;
+        .caption-box {
+            background: rgba(0, 0, 0, 0.95);
+            padding: 20px 30px;
+            border-radius: 8px;
+            max-width: 95%;
             text-align: center;
+            border: 2px solid rgba(255, 255, 255, 0.3);
         }
 
-        .setting-item {
+        .caption-text {
+            font-size: clamp(1.5em, 5vw, 2em);
+            line-height: 1.4;
+            color: #ffffff;
+            font-weight: 600;
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.9);
+            min-height: 1.4em;
+            word-wrap: break-word;
+        }
+
+        .caption-text.interim {
+            color: #cccccc;
+        }
+
+        .timestamp {
+            display: none;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #95a5a6;
+        }
+
+        .empty-state svg {
+            width: clamp(50px, 15vw, 80px);
+            height: clamp(50px, 15vw, 80px);
             margin-bottom: 20px;
+            opacity: 0.5;
         }
 
-        .setting-item label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
+        .empty-state p {
+            font-size: clamp(0.9em, 3vw, 1em);
         }
 
-        .setting-item select,
-        .setting-item input {
-            width: 100%;
-            padding: 12px;
-            border: none;
+        .settings {
+            padding: 20px;
+            background: #f8f9fa;
+            border-top: 2px solid #e9ecef;
+        }
+
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .setting-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .setting-row label {
+            font-size: clamp(0.85em, 2.5vw, 0.95em);
+            flex: 1 1 120px;
+        }
+
+        select {
+            padding: 8px 15px;
+            border: 2px solid #e9ecef;
             border-radius: 8px;
-            font-size: 1em;
-            background: rgba(255, 255, 255, 0.9);
-        }
-
-        .setting-item input[type="range"] {
-            background: transparent;
-        }
-
-        .btn {
-            width: 100%;
-            padding: 15px;
-            margin-top: 10px;
-            border: none;
-            border-radius: 8px;
-            font-size: 1.1em;
+            font-size: clamp(0.85em, 2.5vw, 0.95em);
             cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s ease;
+            flex: 1 1 150px;
+            max-width: 250px;
         }
 
-        .btn-start {
-            background: #2ecc71;
-            color: white;
+        .warning {
+            background: #fff3cd;
+            color: #856404;
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin: 15px 20px;
+            display: none;
+            font-size: clamp(0.85em, 2.5vw, 0.95em);
         }
 
-        .btn-start:hover {
-            background: #27ae60;
+        /* Mobile-specific adjustments */
+        @media (max-width: 600px) {
+            body {
+                padding: 5px;
+            }
+
+            .container {
+                border-radius: 15px;
+            }
+
+            .header {
+                padding: 15px;
+            }
+
+            .controls {
+                padding: 15px 10px;
+            }
+
+            .btn {
+                min-width: 100px;
+                padding: 10px 20px;
+            }
+
+            .caption-display {
+                padding: 20px 10px;
+                min-height: 150px;
+            }
+
+            .caption-box {
+                padding: 15px 20px;
+            }
+
+            .settings {
+                padding: 15px;
+            }
+
+            .setting-row {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .setting-row label,
+            select {
+                width: 100%;
+                max-width: 100%;
+            }
         }
 
-        .btn-close {
-            background: #95a5a6;
-            color: white;
-        }
-
-        .btn-close:hover {
-            background: #7f8c8d;
-        }
-
-        .value-display {
-            text-align: right;
-            font-size: 0.9em;
-            color: #bbb;
+        /* Tablet adjustments */
+        @media (min-width: 601px) and (max-width: 900px) {
+            .caption-display {
+                padding: 30px 20px;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="caption-container">
-        <div class="caption-box" id="captionBox">
-            <div class="caption-text" id="captionText"></div>
+    <div class="container">
+        <div class="header">
+            <h1>🎤 Live Speech Captions</h1>
+            <p>Real-time speech-to-text transcription</p>
         </div>
-    </div>
 
-    <div class="status-indicator" id="statusIndicator">
-        <div class="status-dot" id="statusDot"></div>
-        <span id="statusText">Initializing...</span>
-    </div>
+        <div class="warning" id="warning">
+            ⚠️ Web Speech API works best in Google Chrome. Make sure to allow microphone access.
+        </div>
 
-    <div class="error-message" id="errorMessage"></div>
+        <div class="controls">
+            <button class="btn btn-start" id="startBtn">Start Listening</button>
+            <button class="btn btn-stop" id="stopBtn">Stop Listening</button>
+            <button class="btn btn-clear" id="clearBtn">Clear Captions</button>
+        </div>
 
-    <div class="settings-overlay" id="settingsOverlay">
-        <div class="settings-content">
-            <h2>🎤 Caption Settings</h2>
-            
-            <div class="setting-item">
-                <label for="languageSelect">Language:</label>
+        <div class="status">
+            <div class="status-indicator">
+                <div class="status-dot" id="statusDot"></div>
+                <span id="statusText">Ready to start</span>
+            </div>
+            <span id="wordCount">0 words</span>
+        </div>
+
+        <div class="caption-display" id="captionDisplay">
+            <div class="empty-state">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                    <line x1="12" y1="19" x2="12" y2="23"></line>
+                    <line x1="8" y1="23" x2="16" y2="23"></line>
+                </svg>
+                <p>Click "Start Listening" to begin transcription</p>
+            </div>
+        </div>
+
+        <div class="settings">
+            <div class="setting-row">
+                <label>Language:</label>
                 <select id="languageSelect">
                     <option value="en-US">English (US)</option>
                     <option value="en-GB">English (UK)</option>
@@ -237,37 +345,24 @@
                     <option value="zh-CN">Chinese (Mandarin)</option>
                 </select>
             </div>
-
-            <div class="setting-item">
-                <label for="fontSizeRange">
-                    Font Size: <span class="value-display" id="fontSizeValue">2.5em</span>
-                </label>
-                <input type="range" id="fontSizeRange" min="1.5" max="4" step="0.1" value="2.5">
+            <div class="setting-row">
+                <label>Continuous Mode:</label>
+                <select id="continuousSelect">
+                    <option value="true">On (keeps listening)</option>
+                    <option value="false">Off (stops after pause)</option>
+                </select>
             </div>
-
-            <div class="setting-item">
-                <label for="bgOpacityRange">
-                    Background Opacity: <span class="value-display" id="bgOpacityValue">85%</span>
-                </label>
-                <input type="range" id="bgOpacityRange" min="0" max="100" step="5" value="85">
-            </div>
-
-            <div class="setting-item">
-                <label for="maxWidthRange">
-                    Max Width: <span class="value-display" id="maxWidthValue">90%</span>
-                </label>
-                <input type="range" id="maxWidthRange" min="50" max="100" step="5" value="90">
-            </div>
-
-            <button class="btn btn-start" id="startBtnSettings">Start Captions</button>
-            <button class="btn btn-close" id="closeBtnSettings">Close Settings</button>
         </div>
     </div>
 
     <script>
         // Check browser support
         if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-            showError('Your browser does not support Speech Recognition. Please use Google Chrome.');
+            document.getElementById('warning').style.display = 'block';
+            document.getElementById('warning').textContent = '❌ Your browser does not support Speech Recognition. Please use Google Chrome.';
+            document.getElementById('startBtn').disabled = true;
+        } else {
+            document.getElementById('warning').style.display = 'block';
         }
 
         // Initialize Speech Recognition
@@ -275,95 +370,75 @@
         const recognition = new SpeechRecognition();
 
         // Get elements
-        const captionBox = document.getElementById('captionBox');
-        const captionText = document.getElementById('captionText');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const captionDisplay = document.getElementById('captionDisplay');
         const statusDot = document.getElementById('statusDot');
         const statusText = document.getElementById('statusText');
-        const errorMessage = document.getElementById('errorMessage');
-        const settingsOverlay = document.getElementById('settingsOverlay');
-
-        // Settings elements
+        const wordCount = document.getElementById('wordCount');
         const languageSelect = document.getElementById('languageSelect');
-        const fontSizeRange = document.getElementById('fontSizeRange');
-        const fontSizeValue = document.getElementById('fontSizeValue');
-        const bgOpacityRange = document.getElementById('bgOpacityRange');
-        const bgOpacityValue = document.getElementById('bgOpacityValue');
-        const maxWidthRange = document.getElementById('maxWidthRange');
-        const maxWidthValue = document.getElementById('maxWidthValue');
-        const startBtnSettings = document.getElementById('startBtnSettings');
-        const closeBtnSettings = document.getElementById('closeBtnSettings');
+        const continuousSelect = document.getElementById('continuousSelect');
 
         let isListening = false;
-        let hideTimeout;
+        let totalWords = 0;
 
         // Configure recognition
         recognition.continuous = true;
         recognition.interimResults = true;
         recognition.lang = 'en-US';
-        recognition.maxAlternatives = 1;
 
-        // Load saved settings
-        loadSettings();
-
-        // Check if settings mode
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.has('settings')) {
-            settingsOverlay.classList.add('show');
-            statusText.textContent = 'Settings Mode';
-            statusDot.classList.add('ready');
-        } else {
-            // Auto-start after 2 seconds
-            setTimeout(() => {
-                startRecognition();
-            }, 2000);
-        }
-
-        // Settings event listeners
+        // Update settings
         languageSelect.addEventListener('change', (e) => {
             recognition.lang = e.target.value;
-            saveSettings();
         });
 
-        fontSizeRange.addEventListener('input', (e) => {
-            const size = e.target.value + 'em';
-            captionText.style.fontSize = size;
-            fontSizeValue.textContent = size;
-            saveSettings();
+        continuousSelect.addEventListener('change', (e) => {
+            recognition.continuous = e.target.value === 'true';
         });
 
-        bgOpacityRange.addEventListener('input', (e) => {
-            const opacity = e.target.value / 100;
-            captionBox.style.background = `rgba(0, 0, 0, ${opacity})`;
-            bgOpacityValue.textContent = e.target.value + '%';
-            saveSettings();
-        });
-
-        maxWidthRange.addEventListener('input', (e) => {
-            captionBox.style.maxWidth = e.target.value + '%';
-            maxWidthValue.textContent = e.target.value + '%';
-            saveSettings();
-        });
-
-        startBtnSettings.addEventListener('click', () => {
-            settingsOverlay.classList.remove('show');
-            startRecognition();
-        });
-
-        closeBtnSettings.addEventListener('click', () => {
-            settingsOverlay.classList.remove('show');
-        });
-
-        function startRecognition() {
-            try {
-                recognition.start();
-                isListening = true;
-                statusDot.classList.add('listening');
-                statusText.textContent = 'Listening...';
-            } catch (error) {
-                console.error('Failed to start recognition:', error);
-                showError('Failed to start speech recognition');
+        // Start listening
+        startBtn.addEventListener('click', () => {
+            recognition.start();
+            isListening = true;
+            startBtn.style.display = 'none';
+            stopBtn.style.display = 'inline-block';
+            statusDot.classList.add('listening');
+            statusText.textContent = 'Listening...';
+            
+            // Clear empty state
+            const emptyState = captionDisplay.querySelector('.empty-state');
+            if (emptyState) {
+                emptyState.remove();
             }
-        }
+        });
+
+        // Stop listening
+        stopBtn.addEventListener('click', () => {
+            recognition.stop();
+            isListening = false;
+            startBtn.style.display = 'inline-block';
+            stopBtn.style.display = 'none';
+            statusDot.classList.remove('listening');
+            statusText.textContent = 'Stopped';
+        });
+
+        // Clear captions
+        clearBtn.addEventListener('click', () => {
+            captionDisplay.innerHTML = `
+                <div class="empty-state">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                        <line x1="12" y1="19" x2="12" y2="23"></line>
+                        <line x1="8" y1="23" x2="16" y2="23"></line>
+                    </svg>
+                    <p>Click "Start Listening" to begin transcription</p>
+                </div>
+            `;
+            totalWords = 0;
+            wordCount.textContent = '0 words';
+        });
 
         // Handle results
         recognition.onresult = (event) => {
@@ -374,139 +449,67 @@
                 currentText += transcript + ' ';
             }
 
+            // Update the single caption display
             updateCaption(currentText.trim());
         };
 
-        // Update caption display
+        // Update caption to display (replaces old text)
         function updateCaption(text) {
-            if (!text) {
-                hideCaption();
-                return;
+            if (!text) return;
+
+            // Remove empty state if exists
+            const emptyState = captionDisplay.querySelector('.empty-state');
+            if (emptyState) {
+                emptyState.remove();
             }
 
+            // Find or create the caption box
+            let captionBox = captionDisplay.querySelector('.caption-box');
+            
+            if (!captionBox) {
+                captionBox = document.createElement('div');
+                captionBox.className = 'caption-box';
+                captionBox.innerHTML = '<div class="caption-text"></div>';
+                captionDisplay.appendChild(captionBox);
+            }
+
+            // Update the text
+            const captionText = captionBox.querySelector('.caption-text');
             captionText.textContent = text;
-            captionBox.classList.add('show');
 
-            // Clear existing timeout
-            if (hideTimeout) {
-                clearTimeout(hideTimeout);
-            }
-
-            // Hide caption after 3 seconds of no new text
-            hideTimeout = setTimeout(() => {
-                hideCaption();
-            }, 3000);
-        }
-
-        function hideCaption() {
-            captionBox.classList.remove('show');
-            captionText.textContent = '';
+            // Update word count
+            totalWords = text.trim().split(/\s+/).filter(w => w.length > 0).length;
+            wordCount.textContent = `${totalWords} words`;
         }
 
         // Handle errors
         recognition.onerror = (event) => {
             console.error('Speech recognition error:', event.error);
+            statusText.textContent = `Error: ${event.error}`;
+            statusDot.classList.remove('listening');
             
             if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-                showError('Microphone access denied. Please allow microphone access in your browser settings.');
-            } else if (event.error === 'no-speech') {
-                // Ignore no-speech errors, this is normal
-                return;
-            } else if (event.error === 'network') {
-                showError('Network error. Please check your internet connection.');
-            } else {
-                statusText.textContent = `Error: ${event.error}`;
+                alert('Microphone access denied. Please allow microphone access and try again.');
             }
         };
 
         // Handle end
         recognition.onend = () => {
-            if (isListening) {
-                // Auto-restart if still listening
+            if (isListening && recognition.continuous) {
+                // Restart if continuous mode and still listening
                 try {
                     recognition.start();
                 } catch (e) {
-                    console.log('Failed to restart:', e);
-                    setTimeout(() => {
-                        try {
-                            recognition.start();
-                        } catch (err) {
-                            showError('Speech recognition stopped. Please refresh the page.');
-                        }
-                    }, 1000);
+                    console.log('Recognition restart failed:', e);
                 }
+            } else {
+                statusDot.classList.remove('listening');
+                statusText.textContent = 'Stopped';
+                startBtn.style.display = 'inline-block';
+                stopBtn.style.display = 'none';
+                isListening = false;
             }
         };
-
-        // Handle start
-        recognition.onstart = () => {
-            statusDot.classList.add('listening');
-            statusDot.classList.remove('ready');
-            statusText.textContent = 'Listening...';
-        };
-
-        function showError(message) {
-            errorMessage.textContent = message;
-            errorMessage.style.display = 'block';
-            statusText.textContent = 'Error';
-            statusDot.classList.remove('listening', 'ready');
-        }
-
-        function saveSettings() {
-            const settings = {
-                language: languageSelect.value,
-                fontSize: fontSizeRange.value,
-                bgOpacity: bgOpacityRange.value,
-                maxWidth: maxWidthRange.value
-            };
-            localStorage.setItem('captionSettings', JSON.stringify(settings));
-        }
-
-        function loadSettings() {
-            const saved = localStorage.getItem('captionSettings');
-            if (saved) {
-                const settings = JSON.parse(saved);
-                
-                languageSelect.value = settings.language || 'en-US';
-                recognition.lang = settings.language || 'en-US';
-                
-                if (settings.fontSize) {
-                    fontSizeRange.value = settings.fontSize;
-                    captionText.style.fontSize = settings.fontSize + 'em';
-                    fontSizeValue.textContent = settings.fontSize + 'em';
-                }
-                
-                if (settings.bgOpacity) {
-                    bgOpacityRange.value = settings.bgOpacity;
-                    captionBox.style.background = `rgba(0, 0, 0, ${settings.bgOpacity / 100})`;
-                    bgOpacityValue.textContent = settings.bgOpacity + '%';
-                }
-                
-                if (settings.maxWidth) {
-                    maxWidthRange.value = settings.maxWidth;
-                    captionBox.style.maxWidth = settings.maxWidth + '%';
-                    maxWidthValue.textContent = settings.maxWidth + '%';
-                }
-            }
-        }
-
-        // Keyboard shortcuts (for OBS interaction window)
-        document.addEventListener('keydown', (e) => {
-            // Press 'S' to show settings
-            if (e.key === 's' || e.key === 'S') {
-                settingsOverlay.classList.toggle('show');
-            }
-            // Press 'R' to restart
-            if (e.key === 'r' || e.key === 'R') {
-                recognition.stop();
-                setTimeout(() => startRecognition(), 500);
-            }
-            // Press 'H' to hide status indicator
-            if (e.key === 'h' || e.key === 'H') {
-                const indicator = document.getElementById('statusIndicator');
-                indicator.style.display = indicator.style.display === 'none' ? 'flex' : 'none';
-            }
-        });
     </script>
 </body>
 </html>
